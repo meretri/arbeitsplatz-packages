@@ -1,0 +1,94 @@
+name: scan-and-publish-python-dependencies
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - closed
+    paths:
+      - requirements.txt
+      - .github/workflows/scan-and-publish-python-dependencies.yml
+  workflow_dispatch:
+
+jobs:
+  scan:
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+
+    env:
+      PYTHON_VERSION: "3.12"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install scan tooling
+        run: |
+          python -m pip install --upgrade pip
+          pip install pip-audit
+
+      - name: Audit requirements.txt
+        run: |
+          pip-audit -r requirements.txt
+
+  publish:
+    if: github.event.action == 'closed' && github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+
+    env:
+      PYTHON_VERSION: "3.12"
+      AZURE_ARTIFACTS_FEED_URL: "https://pkgs.dev.azure.com/<ORG>/<PROJECT>/_packaging/<FEED>/pypi/upload/"
+
+    steps:
+      - name: Checkout merged main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install tooling
+        run: |
+          python -m pip install --upgrade pip
+          pip install pip-audit twine
+
+      - name: Audit requirements.txt again on merged state
+        run: |
+          pip-audit -r requirements.txt
+
+      - name: Download package artifacts
+        run: |
+          mkdir -p vendor
+          python -m pip download -r requirements.txt -d vendor
+
+      - name: Configure Twine for Azure Artifacts
+        run: |
+          cat > ~/.pypirc <<EOF
+          [distutils]
+          index-servers =
+              internal-feed
+
+          [internal-feed]
+          repository = ${AZURE_ARTIFACTS_FEED_URL}
+          username = ${TWINE_USERNAME}
+          password = ${TWINE_PASSWORD}
+          EOF
+        env:
+          TWINE_USERNAME: ${{ secrets.AZURE_ARTIFACTS_USERNAME }}
+          TWINE_PASSWORD: ${{ secrets.AZURE_ARTIFACTS_PAT }}
+
+      - name: Upload packages to Azure Artifacts
+        run: |
+          python -m twine upload -r internal-feed vendor/*
