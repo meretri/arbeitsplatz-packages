@@ -14,7 +14,7 @@ on:
   workflow_dispatch:
 
 env:
-  DATABRICKS_CLI_VERSION: "0.275.0"
+  DATABRICKS_CLI_VERSION: "1.2.1"
   AZURE_DEVOPS_ORG_URL: "https://dev.azure.com/meretringwald"
   AZURE_DEVOPS_PROJECT: "private-feed"
   AZURE_ARTIFACTS_FEED: "private-packages"
