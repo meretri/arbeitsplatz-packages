@@ -9,9 +9,6 @@ on:
       - synchronize
       - reopened
       - closed
-    paths:
-      - requirements.txt
-      - .github/workflows/scan-and-publish-python-dependencies.yml
   workflow_dispatch:
 
 jobs:
