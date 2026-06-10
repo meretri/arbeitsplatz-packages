@@ -75,9 +75,9 @@ jobs:
           cat > ~/.pypirc <<EOF
           [distutils]
           index-servers =
-              internal-feed
+              private-packages
 
-          [internal-feed]
+          [private-packages]
           repository = ${AZURE_ARTIFACTS_FEED_URL}
           username = ${TWINE_USERNAME}
           password = ${TWINE_PASSWORD}
@@ -88,4 +88,4 @@ jobs:
 
       - name: Upload packages to Azure Artifacts
         run: |
-          python -m twine upload -r internal-feed vendor/*
+          python -m twine upload -r private-packages vendor/*
