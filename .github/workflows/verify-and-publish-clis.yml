@@ -8,9 +8,7 @@ on:
       - opened
       - synchronize
       - reopened
-  push:
-    branches:
-      - main
+      - closed
   workflow_dispatch:
 
 env:
@@ -22,7 +20,7 @@ env:
 
 jobs:
   verify:
-    if: github.event_name == 'pull_request'
+    if: github.event.action != 'closed'
     runs-on: macos-latest
 
     steps:
