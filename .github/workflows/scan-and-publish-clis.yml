@@ -1,0 +1,94 @@
+name: scan-and-publish-clis
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  DATABRICKS_CLI_VERSION: "0.275.0"
+  AZURE_DEVOPS_ORG_URL: "https://dev.azure.com/meretringwald"
+  AZURE_DEVOPS_PROJECT: "private-feed"
+  AZURE_ARTIFACTS_FEED: "private-packages"
+
+jobs:
+  scan-clis:
+    if: github.event_name == 'pull_request'
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install scanner
+        run: |
+          brew update
+          brew install trivy
+
+      - name: Download Databricks CLI release
+        run: |
+          mkdir -p cli-payload/databricks-cli
+          curl -L \
+            -o cli-payload/databricks-cli/databricks_cli.zip \
+            https://github.com/databricks/cli/releases/download/v${DATABRICKS_CLI_VERSION}/databricks_cli_${DATABRICKS_CLI_VERSION}_darwin_amd64.zip
+          unzip cli-payload/databricks-cli/databricks_cli.zip -d cli-payload/databricks-cli/
+
+      - name: Scan Databricks CLI payload
+        run: |
+          trivy fs --exit-code 1 --severity HIGH,CRITICAL cli-payload/databricks-cli
+
+      - name: Placeholder for Azure CLI
+        run: |
+          echo "Add Azure CLI acquisition step once exact versioned artifact source is defined"
+
+  publish-clis:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install scanner and Azure CLI tooling
+        run: |
+          brew update
+          brew install trivy azure-cli
+
+      - name: Add Azure DevOps extension
+        run: |
+          az extension add --name azure-devops --yes || az extension update --name azure-devops
+
+      - name: Download Databricks CLI release
+        run: |
+          mkdir -p cli-payload/databricks-cli
+          curl -L \
+            -o cli-payload/databricks-cli/databricks_cli.zip \
+            https://github.com/databricks/cli/releases/download/v${DATABRICKS_CLI_VERSION}/databricks_cli_${DATABRICKS_CLI_VERSION}_darwin_amd64.zip
+          unzip cli-payload/databricks-cli/databricks_cli.zip -d cli-payload/databricks-cli/
+
+      - name: Scan Databricks CLI payload
+        run: |
+          trivy fs --exit-code 1 --severity HIGH,CRITICAL cli-payload/databricks-cli
+
+      - name: Publish Databricks CLI to Azure Artifacts Universal Packages
+        env:
+          AZURE_DEVOPS_EXT_PAT: ${{ secrets.AZURE_ARTIFACTS_PAT }}
+        run: |
+          az devops configure --defaults organization=${AZURE_DEVOPS_ORG_URL} project=${AZURE_DEVOPS_PROJECT}
+          az artifacts universal publish \
+            --organization ${AZURE_DEVOPS_ORG_URL} \
+            --project ${AZURE_DEVOPS_PROJECT} \
+            --scope project \
+            --feed ${AZURE_ARTIFACTS_FEED} \
+            --name databricks-cli-macos \
+            --version ${DATABRICKS_CLI_VERSION} \
+            --path cli-payload/databricks-cli \
+            --description "Databricks CLI macOS payload scanned in GitHub Actions"
