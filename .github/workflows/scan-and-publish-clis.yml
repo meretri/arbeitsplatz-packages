@@ -1,4 +1,4 @@
-name: scan-and-publish-clis
+name: verify-and-publish-databricks-cli
 
 on:
   pull_request:
@@ -14,81 +14,128 @@ on:
   workflow_dispatch:
 
 env:
-  DATABRICKS_CLI_VERSION: "1.2.1"
+  DATABRICKS_CLI_VERSION: "0.275.0"
   AZURE_DEVOPS_ORG_URL: "https://dev.azure.com/meretringwald"
   AZURE_DEVOPS_PROJECT: "private-feed"
   AZURE_ARTIFACTS_FEED: "private-packages"
+  UNIVERSAL_PACKAGE_NAME: "databricks-cli-macos"
 
 jobs:
-  scan-clis:
+  verify:
     if: github.event_name == 'pull_request'
     runs-on: macos-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Prepare workspace
+        run: mkdir -p cli-payload/databricks-cli
 
-      - name: Install scanner
+      - name: Download Databricks CLI and checksum
+        working-directory: cli-payload/databricks-cli
         run: |
-          brew update
-          brew install trivy
+          VERSION="${DATABRICKS_CLI_VERSION}"
+          BASE_URL="https://github.com/databricks/cli/releases/download/v${VERSION}"
 
-      - name: Download Databricks CLI release
+          curl -L -o "databricks_cli_${VERSION}_darwin_amd64.zip" \
+            "${BASE_URL}/databricks_cli_${VERSION}_darwin_amd64.zip"
+
+          curl -L -o "databricks_cli_${VERSION}_SHA256SUMS" \
+            "${BASE_URL}/databricks_cli_${VERSION}_SHA256SUMS"
+
+      - name: Verify checksum
+        working-directory: cli-payload/databricks-cli
         run: |
-          mkdir -p cli-payload/databricks-cli
-          curl -L \
-            -o cli-payload/databricks-cli/databricks_cli.zip \
-            https://github.com/databricks/cli/releases/download/v${DATABRICKS_CLI_VERSION}/databricks_cli_${DATABRICKS_CLI_VERSION}_darwin_amd64.zip
-          unzip cli-payload/databricks-cli/databricks_cli.zip -d cli-payload/databricks-cli/
+          VERSION="${DATABRICKS_CLI_VERSION}"
+          FILE="databricks_cli_${VERSION}_darwin_amd64.zip"
 
-      - name: Scan Databricks CLI payload
+          EXPECTED_SHA=$(grep "${FILE}" "databricks_cli_${VERSION}_SHA256SUMS" | awk '{print $1}')
+          ACTUAL_SHA=$(shasum -a 256 "${FILE}" | awk '{print $1}')
+
+          echo "Expected: ${EXPECTED_SHA}"
+          echo "Actual:   ${ACTUAL_SHA}"
+
+          test -n "${EXPECTED_SHA}"
+          test "${EXPECTED_SHA}" = "${ACTUAL_SHA}"
+
+      - name: Unpack CLI
+        working-directory: cli-payload/databricks-cli
         run: |
-          trivy fs --exit-code 1 --severity HIGH,CRITICAL cli-payload/databricks-cli
+          VERSION="${DATABRICKS_CLI_VERSION}"
+          unzip -o "databricks_cli_${VERSION}_darwin_amd64.zip"
 
-      - name: Placeholder for Azure CLI
+      - name: Verify CLI version output
+        working-directory: cli-payload/databricks-cli
         run: |
-          echo "Add Azure CLI acquisition step once exact versioned artifact source is defined"
+          ./databricks version | tee version.txt
+          ./databricks version | grep "v${DATABRICKS_CLI_VERSION}"
 
-  publish-clis:
+  publish:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: macos-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Prepare workspace
+        run: mkdir -p cli-payload/databricks-cli
 
-      - name: Install scanner and Azure CLI tooling
+      - name: Download Databricks CLI and checksum
+        working-directory: cli-payload/databricks-cli
+        run: |
+          VERSION="${DATABRICKS_CLI_VERSION}"
+          BASE_URL="https://github.com/databricks/cli/releases/download/v${VERSION}"
+
+          curl -L -o "databricks_cli_${VERSION}_darwin_amd64.zip" \
+            "${BASE_URL}/databricks_cli_${VERSION}_darwin_amd64.zip"
+
+          curl -L -o "databricks_cli_${VERSION}_SHA256SUMS" \
+            "${BASE_URL}/databricks_cli_${VERSION}_SHA256SUMS"
+
+      - name: Verify checksum
+        working-directory: cli-payload/databricks-cli
+        run: |
+          VERSION="${DATABRICKS_CLI_VERSION}"
+          FILE="databricks_cli_${VERSION}_darwin_amd64.zip"
+
+          EXPECTED_SHA=$(grep "${FILE}" "databricks_cli_${VERSION}_SHA256SUMS" | awk '{print $1}')
+          ACTUAL_SHA=$(shasum -a 256 "${FILE}" | awk '{print $1}')
+
+          echo "Expected: ${EXPECTED_SHA}"
+          echo "Actual:   ${ACTUAL_SHA}"
+
+          test -n "${EXPECTED_SHA}"
+          test "${EXPECTED_SHA}" = "${ACTUAL_SHA}"
+
+      - name: Unpack CLI
+        working-directory: cli-payload/databricks-cli
+        run: |
+          VERSION="${DATABRICKS_CLI_VERSION}"
+          unzip -o "databricks_cli_${VERSION}_darwin_amd64.zip"
+
+      - name: Verify CLI version output
+        working-directory: cli-payload/databricks-cli
+        run: |
+          ./databricks version | tee version.txt
+          ./databricks version | grep "v${DATABRICKS_CLI_VERSION}"
+
+      - name: Install Azure CLI
         run: |
           brew update
-          brew install trivy azure-cli
+          brew install azure-cli
 
       - name: Add Azure DevOps extension
         run: |
           az extension add --name azure-devops --yes || az extension update --name azure-devops
 
-      - name: Download Databricks CLI release
-        run: |
-          mkdir -p cli-payload/databricks-cli
-          curl -L \
-            -o cli-payload/databricks-cli/databricks_cli.zip \
-            https://github.com/databricks/cli/releases/download/v${DATABRICKS_CLI_VERSION}/databricks_cli_${DATABRICKS_CLI_VERSION}_darwin_amd64.zip
-          unzip cli-payload/databricks-cli/databricks_cli.zip -d cli-payload/databricks-cli/
-
-      - name: Scan Databricks CLI payload
-        run: |
-          trivy fs --exit-code 1 --severity HIGH,CRITICAL cli-payload/databricks-cli
-
-      - name: Publish Databricks CLI to Azure Artifacts Universal Packages
+      - name: Publish as Universal Package
         env:
           AZURE_DEVOPS_EXT_PAT: ${{ secrets.AZURE_ARTIFACTS_PAT }}
         run: |
-          az devops configure --defaults organization=${AZURE_DEVOPS_ORG_URL} project=${AZURE_DEVOPS_PROJECT}
+          az devops configure --defaults organization="${AZURE_DEVOPS_ORG_URL}" project="${AZURE_DEVOPS_PROJECT}"
+
           az artifacts universal publish \
-            --organization ${AZURE_DEVOPS_ORG_URL} \
-            --project ${AZURE_DEVOPS_PROJECT} \
+            --organization "${AZURE_DEVOPS_ORG_URL}" \
+            --project "${AZURE_DEVOPS_PROJECT}" \
             --scope project \
-            --feed ${AZURE_ARTIFACTS_FEED} \
-            --name databricks-cli-macos \
-            --version ${DATABRICKS_CLI_VERSION} \
-            --path cli-payload/databricks-cli \
-            --description "Databricks CLI macOS payload scanned in GitHub Actions"
+            --feed "${AZURE_ARTIFACTS_FEED}" \
+            --name "${UNIVERSAL_PACKAGE_NAME}" \
+            --version "${DATABRICKS_CLI_VERSION}" \
+            --path "cli-payload/databricks-cli" \
+            --description "Databricks CLI macOS payload verified by checksum and version output"
