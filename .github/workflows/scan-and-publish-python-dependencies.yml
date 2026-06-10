@@ -14,7 +14,7 @@ on:
 jobs:
   scan:
     if: github.event.action != 'closed'
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
 
     env:
       PYTHON_VERSION: "3.12"
@@ -88,4 +88,4 @@ jobs:
 
       - name: Upload packages to Azure Artifacts
         run: |
-          python -m twine upload -r private-packages vendor/*
+          python -m twine upload --skip-existing  -r private-packages vendor/*
