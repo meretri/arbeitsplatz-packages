@@ -69,7 +69,7 @@ jobs:
           ./databricks version | grep "v${DATABRICKS_CLI_VERSION}"
 
   publish:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event.action == 'closed' && github.event.pull_request.merged == true
     runs-on: macos-latest
 
     steps:
