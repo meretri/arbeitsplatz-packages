@@ -1,0 +1,126 @@
+name: release-clis-from-tool-versions
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "cli-versions.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release-clis:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read versions from YAML
+        id: versions
+        shell: bash
+        run: |
+          AZ_VERSION=$(python - <<'PY'
+          import yaml
+          with open("cli-versions.yml") as f:
+              data = yaml.safe_load(f)
+          print(data["azure_cli"]["version"])
+          PY
+          )
+
+          DBX_VERSION=$(python - <<'PY'
+          import yaml
+          with open("cli-versions.yml") as f:
+              data = yaml.safe_load(f)
+          print(data["databricks_cli"]["version"])
+          PY
+          )
+
+          echo "azure_cli_version=${AZ_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "databricks_cli_version=${DBX_VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Build release tag
+        id: tag
+        shell: bash
+        run: |
+          TAG="cli-bundle-az-${{ steps.versions.outputs.azure_cli_version }}-dbx-${{ steps.versions.outputs.databricks_cli_version }}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Prepare dist folder
+        run: mkdir -p dist
+
+      - name: Download Databricks CLI and checksum
+        working-directory: dist
+        shell: bash
+        run: |
+          VERSION="${{ steps.versions.outputs.databricks_cli_version }}"
+          BASE_URL="https://github.com/databricks/cli/releases/download/v${VERSION}"
+
+          curl -L -o "databricks_cli_${VERSION}_darwin_amd64.zip" \
+            "${BASE_URL}/databricks_cli_${VERSION}_darwin_amd64.zip"
+
+          curl -L -o "databricks_cli_${VERSION}_SHA256SUMS" \
+            "${BASE_URL}/databricks_cli_${VERSION}_SHA256SUMS"
+
+      - name: Verify Databricks checksum
+        working-directory: dist
+        shell: bash
+        run: |
+          VERSION="${{ steps.versions.outputs.databricks_cli_version }}"
+          FILE="databricks_cli_${VERSION}_darwin_amd64.zip"
+
+          EXPECTED_SHA=$(grep "${FILE}" "databricks_cli_${VERSION}_SHA256SUMS" | awk '{print $1}')
+          ACTUAL_SHA=$(shasum -a 256 "${FILE}" | awk '{print $1}')
+
+          test -n "${EXPECTED_SHA}"
+          test "${EXPECTED_SHA}" = "${ACTUAL_SHA}"
+
+      - name: Verify Databricks CLI version output
+        working-directory: dist
+        shell: bash
+        run: |
+          VERSION="${{ steps.versions.outputs.databricks_cli_version }}"
+          unzip -o "databricks_cli_${VERSION}_darwin_amd64.zip"
+          ./databricks version | tee "databricks-version.txt"
+          ./databricks version | grep "v${VERSION}"
+
+      - name: Create metadata file
+        shell: bash
+        run: |
+          cat > dist/manifest.json <<EOF
+          {
+            "azure_cli_version": "${{ steps.versions.outputs.azure_cli_version }}",
+            "databricks_cli_version": "${{ steps.versions.outputs.databricks_cli_version }}",
+            "source_file": "cli-versions.yml",
+            "git_sha": "${GITHUB_SHA}"
+          }
+          EOF
+
+      - name: Create release if missing
+        shell: bash
+        run: |
+          TAG="${{ steps.tag.outputs.tag }}"
+          gh release view "${TAG}" >/dev/null 2>&1 || \
+            gh release create "${TAG}" \
+              --title "CLI bundle ${TAG}" \
+              --notes "Automated release from cli-versions.yml merged into main."
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload release assets
+        shell: bash
+        run: |
+          TAG="${{ steps.tag.outputs.tag }}"
+          gh release upload "${TAG}" \
+            dist/*.zip \
+            dist/*SHA256SUMS \
+            dist/*version.txt \
+            dist/manifest.json \
+            --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

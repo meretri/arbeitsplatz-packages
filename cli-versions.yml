@@ -1,0 +1,5 @@
+azure_cli:
+  version: "2.87.0"
+
+databricks_cli:
+  version: "1.2.1"
