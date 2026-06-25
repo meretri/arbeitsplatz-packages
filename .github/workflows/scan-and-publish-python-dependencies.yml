@@ -27,6 +27,24 @@ jobs:
 
       - name: 'Dependency Review'
         uses: actions/dependency-review-action@v5
+      
+    # temp
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+    
+      - name: Install tooling
+        run: |
+          python -m pip install --upgrade pip
+          pip install "twine<6.2" uv
+        
+      - name: Download package artifacts
+        run: |
+          mkdir -p packages
+          uv lock --index pypi=https://pypi.org/
+          uv pip compile pyproject.toml -o requirements.txt
+          python -m pip download -r requirements.txt -d packages
 
   publish:
     if: github.event.action == 'closed' && github.event.pull_request.merged == true
@@ -50,12 +68,14 @@ jobs:
       - name: Install tooling
         run: |
           python -m pip install --upgrade pip
-          pip install "twine<6.2"
+          pip install "twine<6.2" uv
         
       - name: Download package artifacts
         run: |
           mkdir -p packages
-          python -m pip download pyproject.toml -d packages
+          uv lock --index pypi=https://pypi.org/
+          uv pip compile pyproject.toml -o requirements.txt
+          python -m pip download -r requirements.txt -d packages
 
       - name: Configure Twine for Azure Artifacts
         run: |
