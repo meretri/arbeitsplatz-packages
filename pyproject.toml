@@ -8,11 +8,10 @@ dependencies = [
     "pandas",
     "polars",
     "cvxpy",
-    "riskfolio-lab",
+   # "riskfolio-lab",
     "statsmodels",
     "scipy",
     "scikit-learn",
-    "pytorch",
     "xgboost",
     "marimo"
 ]
@@ -25,3 +24,4 @@ package = true
 [[tool.uv.index]]
 name = "private-packages"
 url = "https://VssSessionToken@pkgs.dev.azure.com/meretringwald/private-feed/_packaging/private-packages/pypi/simple/"
+default=true
