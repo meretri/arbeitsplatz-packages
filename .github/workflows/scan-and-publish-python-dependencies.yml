@@ -73,7 +73,7 @@ jobs:
       - name: Download package artifacts
         run: |
           mkdir -p packages
-          uv lock --index pypi=https://pypi.org/
+          uv lock --default-index pypi=https://pypi.org/
           uv pip compile pyproject.toml -o requirements.txt
           python -m pip download -r requirements.txt -d packages
 
