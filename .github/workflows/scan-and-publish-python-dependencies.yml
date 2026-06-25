@@ -42,9 +42,12 @@ jobs:
       - name: Download package artifacts
         run: |
           mkdir -p packages
-          uv lock --index pypi=https://pypi.org/
+          uv lock --index pypi=https://pypi.org/ -v
           uv pip compile pyproject.toml -o requirements.txt
           python -m pip download -r requirements.txt -d packages
+        env:
+          UV_KEYRING_PROVIDER: "disabled" # Prevents uv from looking for a local keyring tool
+          UV_INDEX_PRIVATE_PACKAGES_PASSWORD: ${{ secrets.AZURE_ARTIFACTS_PAT }}
 
   publish:
     if: github.event.action == 'closed' && github.event.pull_request.merged == true
