@@ -29,8 +29,8 @@ jobs:
         uses: actions/dependency-review-action@v5
 
   publish:
-    # if: github.event.action == 'closed' && github.event.pull_request.merged == true
-    if: github.event.action != 'closed'
+    if: github.event.action == 'closed' && github.event.pull_request.merged == true
+    # if: github.event.action != 'closed'
     runs-on: macos-latest
 
     env:
