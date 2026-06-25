@@ -1,9 +1,9 @@
 pandas
 polars
 cvxpy
-#riskfolio-lab
+# riskfolio-lab
 statsmodels
 scipy
 scikit-learn
 xgboost
-marimo
+# marimo
