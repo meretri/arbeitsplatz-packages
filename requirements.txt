@@ -1,3 +1,10 @@
-dbt-databricks
-ruff
-twine<6.2
+pandas
+polars
+cvxpy
+riskfolio-lab
+statsmodels
+scipy
+scikit-learn
+pytorch
+xgboost
+marimo
