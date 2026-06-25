@@ -1,2 +1,0 @@
-# Pre-install keyring and the Artifacts plugin from the public PyPI
-uv tool install keyring --with artifacts-keyring

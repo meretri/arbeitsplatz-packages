@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - pyproject.toml
+      - requirements.txt
     types:
       - opened
       - synchronize
@@ -29,7 +29,8 @@ jobs:
         uses: actions/dependency-review-action@v5
 
   publish:
-    if: github.event.action == 'closed' && github.event.pull_request.merged == true
+    # if: github.event.action == 'closed' && github.event.pull_request.merged == true
+    if: github.event.action != 'closed'
     runs-on: macos-latest
 
     env:
@@ -50,13 +51,12 @@ jobs:
       - name: Install tooling
         run: |
           python -m pip install --upgrade pip
-          pip install "twine<6.2" uv
+          pip install "twine<6.2"
 
       - name: Download package artifacts
         run: |
           mkdir -p packages
-          uv pip compile pyproject.toml -o requirements.txt --default-index pypi=https://pypi.org/
-          python -m pip download -r requirements.txt -d packages
+          pip download -r requirements.txt -d packages
         env:
           UV_KEYRING_PROVIDER: "disabled" # Prevents uv from looking for a local keyring tool
           UV_INDEX_PRIVATE_PACKAGES_PASSWORD: ${{ secrets.AZURE_ARTIFACTS_PAT }}
