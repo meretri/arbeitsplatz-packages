@@ -56,7 +56,7 @@ jobs:
       - name: Download package artifacts
         run: |
           mkdir -p packages
-          uv pip compile pyproject.toml -o requirements.txt --default-index pypi=https://pypi.org/
+          uv pip compile pyproject.toml -o requirements.txt --index pypi=https://pypi.org/
           python -m pip download -r requirements.txt -d packages
         env:
           UV_KEYRING_PROVIDER: "disabled" # Prevents uv from looking for a local keyring tool
