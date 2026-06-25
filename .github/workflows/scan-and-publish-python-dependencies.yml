@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - pyproject.toml
+      - requirements.txt
     types:
       - opened
       - synchronize
