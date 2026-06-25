@@ -1,3 +1,0 @@
-dbt-databricks
-ruff
-twine<6.2

@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - requirements.txt
+      - pyproject.toml
     types:
       - opened
       - synchronize
@@ -23,21 +23,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Install scan tooling
-        run: |
-          python -m pip install --upgrade pip
-          pip install pip-audit
-
-      - name: Audit requirements.txt
-        run: |
-          pip-audit -r requirements.txt
+      - name: 'Dependency Review'
+        uses: actions/dependency-review-action@v5
 
   publish:
     if: github.event.action == 'closed' && github.event.pull_request.merged == true
@@ -49,28 +38,24 @@ jobs:
 
     steps:
       - name: Checkout merged main
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: main
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-
+    
       - name: Install tooling
         run: |
           python -m pip install --upgrade pip
-          pip install pip-audit "twine<6.2"
-
-      - name: Audit requirements.txt again on merged state
-        run: |
-          pip-audit -r requirements.txt
-
+          pip install "twine<6.2"
+        
       - name: Download package artifacts
         run: |
-          mkdir -p vendor
-          python -m pip download -r requirements.txt -d vendor
+          mkdir -p packages
+          python -m pip download pyproject.toml -d packages
 
       - name: Configure Twine for Azure Artifacts
         run: |
@@ -90,4 +75,4 @@ jobs:
 
       - name: Upload packages to Azure Artifacts
         run: |
-          python -m twine upload --skip-existing -r private-packages vendor/*
+          python -m twine upload --skip-existing -r private-packages packages/*
