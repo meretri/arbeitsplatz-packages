@@ -1,9 +1,0 @@
-pandas
-polars
-cvxpy
-#riskfolio-lab
-statsmodels
-scipy
-scikit-learn
-xgboost
-marimo
