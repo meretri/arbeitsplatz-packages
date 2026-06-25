@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - requirements.txt
+      - pyproject.toml
     types:
       - opened
       - synchronize
@@ -27,6 +27,27 @@ jobs:
 
       - name: 'Dependency Review'
         uses: actions/dependency-review-action@v5
+      
+      # temp
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+    
+      - name: Install tooling
+        run: |
+          python -m pip install --upgrade pip
+          pip install "twine<6.2"
+          pip install uv
+      
+      - name: Generate requirements.txt file
+        run: |
+          uv export --format requirements.txt
+        
+      - name: Download package artifacts
+        run: |
+          mkdir -p packages
+          python -m pip download -r requirements.txt -d packages
 
   publish:
     if: github.event.action == 'closed' && github.event.pull_request.merged == true
@@ -46,11 +67,21 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-
+    
+      - name: Install tooling
+        run: |
+          python -m pip install --upgrade pip
+          pip install "twine<6.2"
+          pip install uv
+      
+      - name: Generate requirements.txt file
+        run: |
+          uv export --format requirements.txt
+        
       - name: Download package artifacts
         run: |
-          mkdir -p vendor
-          python -m pip download -r requirements.txt -d vendor
+          mkdir -p packages
+          python -m pip download -r requirements.txt -d packages
 
       - name: Configure Twine for Azure Artifacts
         run: |
@@ -70,4 +101,4 @@ jobs:
 
       - name: Upload packages to Azure Artifacts
         run: |
-          python -m twine upload --skip-existing -r private-packages vendor/*
+          python -m twine upload --skip-existing -r private-packages packages/*
