@@ -12,7 +12,6 @@ dependencies = [
     "statsmodels",
     "scipy",
     "scikit-learn",
-    "pytorch",
     "xgboost",
     "marimo"
 ]
@@ -25,4 +24,4 @@ package = true
 [[tool.uv.index]]
 name = "private-packages"
 url = "https://VssSessionToken@pkgs.dev.azure.com/meretringwald/private-feed/_packaging/private-packages/pypi/simple/"
-ignore-error-codes = [401] # continue to next index, when authentication fails
+default=true

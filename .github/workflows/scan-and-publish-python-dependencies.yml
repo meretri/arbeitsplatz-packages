@@ -25,29 +25,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: 'Dependency Review'
+      - name: "Dependency Review"
         uses: actions/dependency-review-action@v5
-      
-    # temp
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-    
-      - name: Install tooling
-        run: |
-          python -m pip install --upgrade pip
-          pip install "twine<6.2" uv
-        
-      - name: Download package artifacts
-        run: |
-          mkdir -p packages
-          uv lock --index pypi=https://pypi.org/ -v
-          uv pip compile pyproject.toml -o requirements.txt
-          python -m pip download -r requirements.txt -d packages
-        env:
-          UV_KEYRING_PROVIDER: "disabled" # Prevents uv from looking for a local keyring tool
-          UV_INDEX_PRIVATE_PACKAGES_PASSWORD: ${{ secrets.AZURE_ARTIFACTS_PAT }}
 
   publish:
     if: github.event.action == 'closed' && github.event.pull_request.merged == true
@@ -67,18 +46,20 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-    
+
       - name: Install tooling
         run: |
           python -m pip install --upgrade pip
           pip install "twine<6.2" uv
-        
+
       - name: Download package artifacts
         run: |
           mkdir -p packages
-          uv pip compile pyproject.toml -o requirements.txt --index https://pypi.org/
+          uv pip compile pyproject.toml -o requirements.txt --index pypi=https://pypi.org/
           python -m pip download -r requirements.txt -d packages
-
+        env:
+          UV_KEYRING_PROVIDER: "disabled" # Prevents uv from looking for a local keyring tool
+          UV_INDEX_PRIVATE_PACKAGES_PASSWORD: ${{ secrets.AZURE_ARTIFACTS_PAT }}
       - name: Configure Twine for Azure Artifacts
         run: |
           cat > ~/.pypirc <<EOF
