@@ -35,7 +35,7 @@ jobs:
 
     env:
       PYTHON_VERSION: "3.12"
-      AZURE_ARTIFACTS_FEED_URL: "https://pkgs.dev.azure.com/meretringwald/private-feed/_packaging/private-packages/pypi/upload/"
+      AZURE_ARTIFACTS_FEED_URL: "https://pkgs.dev.azure.com/meretringwald/private-feed/_packaging/python-reviewed/pypi/upload/"
 
     steps:
       - name: Checkout merged main
