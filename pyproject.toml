@@ -3,12 +3,12 @@ name = "gkb-arbeitsplatz"
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
-    "cvxpy>=1.9.2",
+    "cvxp<=0.9.2",
     "pandas>=3.0.3",
     "polars>=1.42.0",
     "scikit-learn>=1.9.0",
     "scipy>=1.18.0",
     "statsmodels>=0.14.6",
     "xgboost>=3.3.0",
-    "marimo"
+    "marimo==0.10",
 ]
