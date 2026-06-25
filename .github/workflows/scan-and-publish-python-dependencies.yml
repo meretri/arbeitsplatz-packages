@@ -23,14 +23,14 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: 'Dependency Review'
         uses: actions/dependency-review-action@v5
       
       # temp
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
     
@@ -54,12 +54,12 @@ jobs:
 
     steps:
       - name: Checkout merged main
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: main
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
     
