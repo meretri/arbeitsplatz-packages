@@ -73,8 +73,7 @@ jobs:
       - name: Download package artifacts
         run: |
           mkdir -p packages
-          uv lock --default-index pypi=https://pypi.org/
-          uv pip compile pyproject.toml -o requirements.txt
+          uv pip compile pyproject.toml -o requirements.txt --index https://pypi.org/
           python -m pip download -r requirements.txt -d packages
 
       - name: Configure Twine for Azure Artifacts
